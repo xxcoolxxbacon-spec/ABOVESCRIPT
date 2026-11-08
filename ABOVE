@@ -1,0 +1,110 @@
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Window = Rayfield:CreateWindow({
+    Name = "ABOVE Auto Planter",
+    LoadingTitle = "Loading...",
+    LoadingSubtitle = "by Kai",
+    Theme = "Default",
+    ToggleUIKeybind = "K",
+})
+
+local MainTab = Window:CreateTab("Farming", 4483362458)
+local SettingsTab = Window:CreateTab("Settings", 4483362458)
+
+local isPlanting = false
+local actionDelay = 0.25 
+local farmRadius = 2 
+
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+local RequestPlace = Remotes:WaitForChild("RequestPlace")
+local RequestHoldBlock = Remotes:WaitForChild("RequestHoldBlock")
+local RequestSetHotbar = Remotes:WaitForChild("RequestSetHotbar")
+
+-- PLANT LOGIC
+local function plantGrid()
+    print("[Planter] Planting...")
+    
+    -- Switch to seed slot and hold them
+    RequestSetHotbar:FireServer(4) 
+    task.wait(0.3)
+    RequestHoldBlock:FireServer("WheatSeeds")
+    task.wait(0.3) 
+
+    local centerX = 6
+    local centerZ = 6
+
+    for x = centerX - farmRadius, centerX + farmRadius do
+        for z = centerZ - farmRadius, centerZ + farmRadius do
+            RequestPlace:FireServer(
+                {y = 0, x = x, z = z},
+                "WheatSeeds",
+                0,
+                Vector3.new(0, 1, 0),
+                false,
+                nil,
+                false
+            )
+            task.wait(actionDelay) 
+        end
+    end
+end
+
+-- MAIN LOOP
+local function startAutoPlant()
+    task.spawn(function()
+        while isPlanting do
+            plantGrid()
+            task.wait(2) -- Wait 2 seconds before doing another cycle
+        end
+    end)
+end
+
+-- UI Elements
+local MainSection = MainTab:CreateSection("Automation")
+
+local AutoPlantToggle = MainTab:CreateToggle({
+    Name = "Auto Plant Grid",
+    CurrentValue = false,
+    Flag = "AutoPlant",
+    Callback = function(Value)
+        isPlanting = Value
+        if Value then
+            startAutoPlant()
+        end
+    end
+})
+
+MainTab:CreateButton({
+    Name = "Plant Grid Once",
+    Callback = function() plantGrid() end,
+})
+
+-- SETTINGS TAB
+local SettingsSection = SettingsTab:CreateSection("Settings")
+
+local RadiusInput = SettingsTab:CreateInput({
+    Name = "Farm Radius (1-10)",
+    CurrentValue = "2",
+    PlaceholderText = "Enter number",
+    RemoveTextAfterFocusLost = false,
+    Callback = function(Text)
+        local num = tonumber(Text)
+        if num and num >= 1 and num <= 10 then
+            farmRadius = num
+        end
+    end,
+})
+
+local SpeedInput = SettingsTab:CreateInput({
+    Name = "Action Speed (0.05 - 1)",
+    CurrentValue = "0.25",
+    PlaceholderText = "Enter number",
+    RemoveTextAfterFocusLost = false,
+    Callback = function(Text)
+        local num = tonumber(Text)
+        if num then
+            actionDelay = num
+        end
+    end,
+})
